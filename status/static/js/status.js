@@ -1,7 +1,7 @@
 // status.js 0.1.0
 
 // (c) 2012 Riccardo Forina
-// Status.js may be freely distributed under the MIT license.
+// Status may be freely distributed under the MIT license.
 // For details and documentation:
 // http://www.codingnot.es
 (function($) {
@@ -38,15 +38,15 @@
         var bUrl = b.get('url');
         aUrl = aUrl.host() + aUrl.path();
         bUrl = bUrl.host() + bUrl.path();
-        return aUrl > bUrl;
+        return aUrl.localeCompare(bUrl);
     };
     // Comparator function to sort Pages by title
     Pages.sortByTitle = function (a, b) {
-        return a.get('metaTitle') > b.get('metaTitle');
+        return a.get('metaTitle').localeCompare(b.get('metaTitle'));
     };
     // Comparator function to sort Pages by description
     Pages.sortByDescription = function (a, b) {
-        return a.get('metaDescription') > b.get('metaDescription');
+        return a.get('metaDescription').localeCompare(b.get('metaDescription'));
     };
 
     // A collection to hold all the crawled Pages, with a default sorting by url
@@ -63,8 +63,8 @@
             linksTo: undefined,
             linkedBy: undefined,
             status: 'unfetched',
-            metaTitle: undefined,
-            metaDescription: undefined
+            metaTitle: '',
+            metaDescription: ''
         },
         initialize: function(attributes) {
             Backbone.Model.prototype.initialize.apply(this, [attributes]);
@@ -192,6 +192,7 @@
 
     var PagesView = Backbone.View.extend({
         initialize: function(){
+            this.$tbody = this.$el.find('tbody');
             this.sortOn = this.$el.find('.btn-sort-on.active').attr('rel');
             this.sortDirection = this.$el.find('.btn-sort-direction.active').attr('rel');
             this.collection.on('add', this.add, this);
@@ -201,7 +202,7 @@
         },
         reset: function() {
             var self = this;
-            this.$el.find('tbody').empty();
+            this.$tbody.empty();
             this.collection.each(function(page) {
                 self.add(page);
             });
@@ -214,7 +215,7 @@
                 });
                 this.cachedPageViewList[page.cid] = pageView;
             }
-            this.$el.find('tbody').append(pageView.el);
+            this.$tbody.append(pageView.el);
             pageView.render();
             return this;
         },
@@ -237,7 +238,6 @@
         },
         filter: function() {
             var filterOn = _.map(this.$el.find('.btn-filter.active'), function(btn) { return $(btn).attr('rel'); });
-            console.log('filterOn: ', filterOn);
             this.collection.each(function(page) {
                 if (filterOn.indexOf(page.get('status')) === -1) {
                     page.trigger('hide');
@@ -257,30 +257,22 @@
             }
         },
         sortAsc: function() {
-            switch(this.sortOn) {
-                case 'url':
+            if (this.sortOn === 'url') {
                     this.collection.comparator = Pages.sortByUrl;
-                    break;
-                case 'title':
+            } else if (this.sortOn === 'title') {
                     this.collection.comparator = Pages.sortByTitle;
-                    break;
-                case 'description':
+            } else if (this.sortOn === 'description') {
                     this.collection.comparator = Pages.sortByDescription;
-                    break;
             }
             this.collection.sort();
         },
         sortDesc: function() {
-            switch(this.sortOn) {
-                case 'url':
+            if (this.sortOn === 'url') {
                     this.collection.comparator = function(a, b) { return Pages.sortByUrl(b, a); };
-                    break;
-                case 'title':
+            } else if (this.sortOn === 'title') {
                     this.collection.comparator = function(a, b) { return Pages.sortByTitle(b, a); };
-                    break;
-                case 'description':
+            } else if (this.sortOn === 'description') {
                     this.collection.comparator = function(a, b) { return Pages.sortByDescription(b, a); };
-                    break;
             }
             this.collection.sort();
         }
