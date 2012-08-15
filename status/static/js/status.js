@@ -6,6 +6,8 @@
 // http://www.codingnot.es
 (function($) {
 
+    window.STATUS = {};
+
     // Save the document.location hostname, it will be used to check if an url
     // points to the crawled website even if it is a full qualified url
     var localhost = (new Uri(document.location)).host();
@@ -15,6 +17,10 @@
         forceTrailingSlash = forceTrailingSlash || true;
         var uri = new Uri(url);
         uri.setAnchor('');  // no hashes in the url, to avoid duplication
+        if (uri.host() === localhost) {
+            uri.setProtocol('');
+            uri.setHost('');
+        }
         var path = uri.path();
         // if no trailing slash in the path, put it (if asked to do so)
         // TODO: I'm damn sure I'll have troubles later on with image checking
@@ -36,6 +42,11 @@
                 this.add(page);
             }
             return page;
+        },
+        internals: function() {
+            return this.filter(function(page) {
+                return page.get('status') !== 'external';
+            });
         }
     });
     // Comparator function to sort Pages by url
@@ -56,8 +67,8 @@
     };
 
     // A collection to hold all the crawled Pages, with a default sorting by url
-    var allPages = new Pages();
-    allPages.comparator = Pages.sortByUrl;
+    window.STATUS.allPages = new Pages();
+    window.STATUS.allPages.comparator = Pages.sortByUrl;
 
     // Page model
     var Page = Backbone.Model.extend({
@@ -69,6 +80,7 @@
             linksTo: undefined,
             linkedBy: undefined,
             status: 'unfetched',
+            statusCode: 'unknown',
             metaTitle: '',
             metaDescription: ''
         },
@@ -90,8 +102,14 @@
             }
             options = options ? _.clone(options) : {};
             options.dataType = 'html';
+            options.success = function() {
+                self.set('status', "success");
+            };
+            options.error = function() {
+                self.set('status', "error");
+            };
             options.complete = function(xhr, status) {
-                self.set('status', "" + xhr.status);
+                self.set('statusCode', xhr.status);
                 self.change();
             };
             return Backbone.Model.prototype.fetch.apply(this, [options]);
@@ -99,14 +117,14 @@
         addLinksTo: function(url) {
             if (this.get('linksTo').get(url))
                 return;
-            var page = allPages.getOrAdd(url);
+            var page = window.STATUS.allPages.getOrAdd(url);
             this.get('linksTo').add(page);
             page.addLinkedBy(this.get('url'));
         },
         addLinkedBy: function(url) {
             if (this.get('linkedBy').get(url))
                 return;
-            var page = allPages.getOrAdd(url);
+            var page = window.STATUS.allPages.getOrAdd(url);
             this.get('linkedBy').add(page);
             page.addLinksTo(this.get('url'));
         },
@@ -143,7 +161,7 @@
             this.linksTemplate = _.template($('#links-dropdown-template').html());
             this.model.on('change:metaTitle', this.setTitle, this);
             this.model.on('change:metaDescription', this.setDescription, this);
-            this.model.on('change:status', this.setStatus, this);
+            this.model.on('change:status change:statusCode', this.setStatus, this);
             this.model.get('linksTo').on('add', this.setLinksTo, this);
             this.model.get('linkedBy').on('add', this.setLinkedBy, this);
             this.model.on('hide', this.hide, this);
@@ -285,10 +303,12 @@
     });
 
     $(document).ready(function() {
+
         var view = new PagesView({
             el: '#status',
-            collection: allPages
+            collection: window.STATUS.allPages
         });
-        allPages.getOrAdd(urlToUri('/'));
+
+        window.STATUS.allPages.getOrAdd(urlToUri('/'));
     });
 }(jQuery));
