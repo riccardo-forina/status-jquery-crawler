@@ -11,9 +11,15 @@
     var localhost = (new Uri(document.location)).host();
 
     // Normalize a url string to an Uri
-    function urlToUri(url) {
+    function urlToUri(url, forceTrailingSlash) {
+        forceTrailingSlash = forceTrailingSlash || true;
         var uri = new Uri(url);
         uri.setAnchor('');  // no hashes in the url, to avoid duplication
+        var path = uri.path();
+        // if no trailing slash in the path, put it (if asked to do so)
+        // TODO: I'm damn sure I'll have troubles later on with image checking
+        if (path[path.length-1] !== '/' && forceTrailingSlash === true)
+            uri.setPath(path + '/');
         return uri;
     }
 
