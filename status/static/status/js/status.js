@@ -1,4 +1,4 @@
-// status.js 0.1.0
+// status.js 0.2.0
 
 // (c) 2012 Riccardo Forina
 // Status may be freely distributed under the MIT license.
@@ -10,14 +10,14 @@
 
     // Save the document.location hostname, it will be used to check if an url
     // points to the crawled website even if it is a full qualified url
-    var localhost = (new Uri(document.location)).host();
+    window.STATUS.localhost = (new Uri(document.location));
 
     // Normalize a url string to an Uri
     function urlToUri(url, forceTrailingSlash) {
-        forceTrailingSlash = forceTrailingSlash || true;
+        forceTrailingSlash = forceTrailingSlash || false;
         var uri = new Uri(url);
         uri.setAnchor('');  // no hashes in the url, to avoid duplication
-        if (uri.host() === localhost) {
+        if (uri.host() === window.STATUS.localhost.host()) {
             uri.setProtocol('');
             uri.setHost('');
         }
@@ -100,6 +100,11 @@
                 this.set('status', 'external');
                 return;
             }
+            if (window.STATUS.allPages.get(urlToUri(this.get('url'), true))) {
+                this.set('status', 'redirect');
+                self.set('statusCode', '30x');
+                return;
+            }
             options = options ? _.clone(options) : {};
             options.dataType = 'html';
             options.success = function() {
@@ -130,7 +135,7 @@
         },
         isExternal: function() {
             var host = this.get('url').host();
-            return host !== "" && host !== localhost;
+            return host !== "" && host !== window.STATUS.localhost.host();
         },
         parse: function(response) {
             var self = this;
@@ -190,6 +195,7 @@
         },
         setStatus: function(page) {
             this.$elStatus.html(this.statusTemplate(this.model.toJSON()));
+            this.$el.removeClass().addClass(this.model.get('status'));
             return this;
         },
         setLinksTo: function(page) {

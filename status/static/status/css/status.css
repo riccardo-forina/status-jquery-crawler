@@ -1,0 +1,9 @@
+#spatial {
+    height: 600px;
+    overflow: hidden;
+    /*background: #000;*/
+}
+#sitemap textarea {
+    height: 600px;
+    width: 100%;
+}
